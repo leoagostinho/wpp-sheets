@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Sheets Sender</title>
+    <style>
+        body { font-family: sans-serif; }
+        #summary {
+            margin: 15px 0;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            display: flex;
+            justify-content: space-around;
+            font-size: 1.1em;
+        }
+        #summary span {
+            font-weight: bold;
+        }
+        #logs {
+            list-style-type: none;
+            padding: 0;
+            margin: 0;
+            height: 300px;
+            border: 1px solid #ccc;
+            overflow-y: scroll;
+            padding: 5px;
+        }
+        #logs li {
+            padding: 2px 0;
+        }
+        #logs li.success {
+            color: green;
+        }
+        #logs li.error {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>WhatsApp Sheets Sender</h1>
+    <button id="sendMessageButton">Send Messages</button>
+    
+    <div id="summary">
+        <div>Processados: <span id="processed-count">0</span> / <span id="total-count">0</span></div>
+        <div style="color: green;">Sucesso: <span id="success-count">0</span></div>
+        <div style="color: red;">Falha: <span id="failed-count">0</span></div>
+    </div>
+
+    <h2>Logs</h2>
+    <ul id="logs"></ul>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const sendMessageButton = document.getElementById('sendMessageButton');
+        const logs = document.getElementById('logs');
+        const processedCountEl = document.getElementById('processed-count');
+        const totalCountEl = document.getElementById('total-count');
+        const successCountEl = document.getElementById('success-count');
+        const failedCountEl = document.getElementById('failed-count');
+
+        const addLog = (log) => {
+            const li = document.createElement('li');
+            li.textContent = log.message;
+            if (log.status) {
+                li.classList.add(log.status);
+            }
+            logs.appendChild(li);
+            logs.scrollTop = logs.scrollHeight;
+        };
+
+        const resetUI = () => {
+            logs.innerHTML = '';
+            processedCountEl.textContent = '0';
+            totalCountEl.textContent = '0';
+            successCountEl.textContent = '0';
+            failedCountEl.textContent = '0';
+        };
+
+        sendMessageButton.addEventListener('click', () => {
+            resetUI();
+            addLog({ message: 'Starting to send messages...' });
+            sendMessageButton.disabled = true;
+            socket.emit('send-messages');
+        });
+
+        socket.on('log', (log) => {
+            addLog(log);
+        });
+
+        socket.on('progress-update', (data) => {
+            totalCountEl.textContent = data.total;
+            processedCountEl.textContent = data.processed;
+            successCountEl.textContent = data.success;
+            failedCountEl.textContent = data.failed;
+        });
+        
+        socket.on('process-finished', () => {
+            sendMessageButton.disabled = false;
+        });
+
+    </script>
+</body>
+</html> 
